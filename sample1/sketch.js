@@ -1,9 +1,14 @@
 let salColor;
-let showMouth = true; // 턱이 처음부터 보이도록 설정
-let mouthY = 210; // 초기 상태에서 턱이 숨겨진 높이
-let isGlassesOn = false; // 안경이 처음에는 없음
-let xPos;
+let showMouth = true;
+let mouthY = 10;
+let isGlassesOn = false;
+let isLaserOn = false;
+let laserLength = 0;
+let maxLaserLength = 300;
+let isEarsOn = false;
+let rotationAngle = 0;
 
+let trails = [];
 let i = 0;
 
 function setup() {
@@ -15,93 +20,159 @@ function draw() {
   background(220);
   textSize(25);
 
-  //해와달
-  if (mouseX>200) {
-    background(240,128,128);
-    fill(255,69,0);
-  ellipse(mouseX-200,50,30,30);
-  }
-  else if(mouseX<=200) {
-    background(100,0,100);
-    fill(211,211,211);
-    ellipse(mouseX+200,50,30,30);
-    while(i<10) {
-      fill(255,250,205);
-      ellipse(random(0,400),random(0,400),10,10);
-      i +=1;
+  // 배경
+  let c1 = color(240, 128, 128);
+  let c2 = color(255, 0, 0);
+  let c3 = color(128, 0, 128);
+  let c4 = color(0, 0, 0);
+
+  if (mouseX > 200) {
+    for (let y = 0; y < height; y++) {
+      let inter = map(y, 0, height, 0, 1);
+      let c = lerpColor(c1, c2, inter);
+      stroke(c);
+      line(0, y, width, y);
     }
-    
+  } else {
+    for (let y = 0; y < height; y++) {
+      let inter = map(y, 0, height, 0, 1);
+      let c = lerpColor(c3, c4, inter);
+      stroke(c);
+      line(0, y, width, y);
+    }
+    while (i < 10) {
+      fill(255, 250, 205);
+      ellipse(random(0, 400), random(0, 400), 10, 10);
+      i++;
+    }
   }
-  // 턱과 입을 먼저 그림 > 뒤에 배치되도록 함
+
+  // 마우스 잔상
+  trails.push({ x: mouseX, y: mouseY, alpha: 255, timestamp: millis() });
+  if (trails.length > 100) {
+    trails.shift();
+  }
+
+  for (let i = trails.length - 1; i >= 0; i--) {
+    let t = trails[i];
+    fill(t.x >= 200 ? color(255, 0, 0, t.alpha) : color(150, 150, 150, t.alpha));
+    stroke(0, 0, 0);
+    ellipse(t.x, t.y, 20);
+    let elapsed = millis() - t.timestamp;
+    t.alpha = map(elapsed, 0, 1000, 255, 0);
+    if (t.alpha <= 0) trails.splice(i, 1);
+  }
+
+  // 현재 마우스 공
+  fill(mouseX >= 200 ? color(255, 0, 0) : color(150));
+  ellipse(mouseX, mouseY, 20);
+
+  // 회전 조건
+  if (isEarsOn && keyIsDown(85)) {
+    rotationAngle += 0.1;
+    text("oiiaioiiiai",250,350);
+  } else {
+    rotationAngle = 0;
+  }
+
+  // 얼굴 전체 그리기 (회전 포함)
+  push();
+  translate(width / 2, height / 2);
+  rotate(rotationAngle);
+
+  // 입
   if (showMouth) {
     fill(salColor);
-    ellipse(200, mouthY, 150, 180); // 턱
+    ellipse(0, mouthY, 150, 180);
     fill(255, 60, 60);
-    ellipse(200, mouthY, 100, 130); // 입
+    ellipse(0, mouthY, 100, 130);
   }
 
-  // 얼굴 요소들 (광대, 눈 등)
+  // 얼굴 요소
   fill(255, 239, 213);
-  ellipse(120, 215, 30, 50); // 왼귀
-  ellipse(280, 215, 30, 50); // 오른귀
-  ellipse(200, 200, 180, 160); // 광대위
+  ellipse(-80, 15, 30, 50); // 왼귀
+  ellipse(80, 15, 30, 50);  // 오른귀
+  ellipse(0, 0, 180, 160); // 얼굴
   fill(169, 169, 169);
-  ellipse(160, 197, 50, 30); // 왼쌍커풀
-  ellipse(240, 197, 50, 30); // 오른쌍커풀
-  fill(255, 255, 255);
-  ellipse(160, 200, 50, 30); // 왼흰자
-  ellipse(240, 200, 50, 30); // 오른흰자
-  fill(50, 50, 50);
-  ellipse(160, 200, 25, 30); // 왼눈동자
-  ellipse(240, 200, 25, 30); // 오른눈동자
+  ellipse(-40, -3, 50, 30);
+  ellipse(40, -3, 50, 30);
+  fill(255);
+  ellipse(-40, 0, 50, 30);
+  ellipse(40, 0, 50, 30);
+  fill(50);
+  ellipse(-40, 0, 25, 30); // 왼눈
+  ellipse(40, 0, 25, 30);  // 오른눈
   fill(139, 69, 19);
-  ellipse(220, 260, 7, 7); // 점
+  ellipse(20, 60, 7, 7); // 점
   fill(250, 235, 215);
-  triangle(200, 200, 215, 245, 185, 245); // 코
-  fill(40, 40, 40);
-  arc(193, 245, 10, 10, radians(180), radians(360)); // 콧구멍
-  arc(207, 245, 10, 10, radians(180), radians(360)); // 콧구멍
-  arc(200, 180, 180, 150, radians(180), radians(360)); // 머리
+  triangle(0, 0, 15, 45, -15, 45); // 코
+  fill(40);
+  arc(-7, 45, 10, 10, radians(180), radians(360));
+  arc(7, 45, 10, 10, radians(180), radians(360));
+  arc(0, -20, 180, 150, radians(180), radians(360)); // 머리
   noStroke();
   fill(255, 239, 213);
-  triangle(200, 160, 210, 180, 195, 180); // 머리 특징
-  stroke(0, 0, 0);
+  triangle(0, -40, 10, -20, -5, -20);
+  stroke(0);
 
-  // 안경을 그리기
+  // 안경
   if (isGlassesOn) {
     rectMode(CENTER);
     strokeWeight(7);
     stroke(0);
     noFill();
-    rect(160, 200, 60, 40); // 왼쪽 안경
-    rect(240, 200, 60, 40); // 오른쪽 안경
-    fill(0, 0, 0);
-    rect(200, 185, 20, 3); // 안경 가운데
-    rect(120, 190, 20, 3); // 왼쪽 다리
-    rect(280, 190, 20, 3); // 오른쪽 다리
-    fill(255, 255, 255);
+    rect(-40, 0, 60, 40);
+    rect(40, 0, 60, 40);
+    fill(0);
+    rect(0, -15, 20, 3);
+    rect(-80, -10, 20, 3);
+    rect(80, -10, 20, 3);
+    fill(255);
     strokeWeight(1);
-    text("안경을 쓴 나", 200, 30);
+    textAlign(CENTER);
+    text("안경을 쓴 나", 0, -170);
   } else {
-    fill(255, 255, 255);
-    text("안경을 벗은 나", 200, 30);
+    fill(255);
+    textAlign(CENTER);
+    text("안경을 벗은 나", 0, -170);
   }
-  
 
-  strokeWeight(1);
+  // 레이저
+  if (isLaserOn) {
+    laserLength = min(laserLength + 10, maxLaserLength);
+    stroke(0, 255, 0);
+    strokeWeight(4);
+    line(-40, 0, -40 - laserLength * cos(PI / 4), 0 + laserLength * sin(PI / 4));
+    line(40, 0, 40 - laserLength * cos(PI / 4), 0 + laserLength * sin(PI / 4));
+    strokeWeight(1);
+  } else {
+    laserLength = 0;
+  }
+
+  // 고양이 귀
+  if (isEarsOn) {
+    fill(150, 150, 150);
+    triangle(-90, -90, -55, -80, -90, -40);
+    triangle(90, -90, 55, -80, 90, -40);
+    fill(255, 250, 250);
+    triangle(-85, -85, -65, -75, -85, -50);
+    triangle(85, -85, 65, -75, 85, -55);
+    text("야옹", -100, -100);
+  }
+
+  pop();
 }
 
-// 키 입력을 감지해서 턱과 입을 유지 또는 숨김
 function keyPressed() {
   if (keyCode === DOWN_ARROW) {
-    mouthY = 230; // 턱과 입을 아래로 이동
+    mouthY = 30;
   } else if (keyCode === UP_ARROW) {
-    mouthY = 210; // 턱과 입을 위로 이동하여 숨기기
+    mouthY = 10;
   } else if (key === 'g') {
-    isGlassesOn = !isGlassesOn; // G키를 누를 때마다 안경 나왔다 없애기
+    isGlassesOn = !isGlassesOn;
+  } else if (key === 'l') {
+    isLaserOn = !isLaserOn;
+  } else if (key === 'c') {
+    isEarsOn = !isEarsOn;
   }
-  
-  
-  
-  
 }
